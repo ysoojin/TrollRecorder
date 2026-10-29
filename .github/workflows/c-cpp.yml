@@ -39,6 +39,21 @@ jobs:
           echo "Installed SDKs:"
           ls -1 "$THEOS/sdks"
 
+      - name: Fix legacy C++ register keywords
+        run: |
+          python3 - <<'PYFIX'
+          from pathlib import Path
+          import re
+          path = Path('cli/dtmf-decoder.mm')
+          content = path.read_text()
+          updated, count = re.subn(r'\bregister\s+', '', content)
+          if count == 0:
+              print('No legacy register keywords found; nothing to patch.')
+          else:
+              path.write_text(updated)
+              print(f'Removed {count} legacy register keyword(s).')
+          PYFIX
+
       - name: Build CLI tools
         run: |
           make clean
