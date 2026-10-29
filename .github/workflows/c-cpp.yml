@@ -28,7 +28,12 @@ jobs:
       - name: Install Theos and iOS SDKs
         run: |
           git clone --depth 1 --recursive https://github.com/theos/theos.git "$THEOS"
-          git clone --depth 1 https://github.com/theos/sdks.git "$THEOS/sdks"
+          # Theos may already create sdks/ while cloning.
+          # Reuse an existing SDK; otherwise replace only the cloned Theos SDK directory.
+          if ! find "$THEOS/sdks" -maxdepth 1 -name '*.sdk' -print -quit 2>/dev/null | grep -q .; then
+            rm -rf "$THEOS/sdks"
+            git clone --depth 1 https://github.com/theos/sdks.git "$THEOS/sdks"
+          fi
           test -f "$THEOS/makefiles/common.mk"
           test -f "$THEOS/makefiles/tool.mk"
           echo "Installed SDKs:"
