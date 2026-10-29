@@ -1,21 +1,50 @@
-name: C/C++ CI
+name: TrollRecorder CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main]
   pull_request:
-    branches: [ "main" ]
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   build:
-
-    runs-on: ubuntu-latest
+    name: Build TrollRecorder CLI
+    runs-on: macos-15
+    permissions:
+      contents: read
+    env:
+      THEOS: ${{ github.workspace }}/theos
+      THEOS_DEVICE_IP: ""
 
     steps:
-    - uses: actions/checkout@v4
-    - name: make
-      run: make
-    - name: make check
-      run: make check
-    - name: make distcheck
-      run: make distcheck
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install prerequisites
+        run: |
+          brew install ldid xz
+
+      - name: Install Theos and iOS SDKs
+        run: |
+          git clone --depth 1 --recursive https://github.com/theos/theos.git "$THEOS"
+          git clone --depth 1 https://github.com/theos/sdks.git "$THEOS/sdks"
+          test -f "$THEOS/makefiles/common.mk"
+          test -f "$THEOS/makefiles/tool.mk"
+          echo "Installed SDKs:"
+          ls -1 "$THEOS/sdks"
+
+      - name: Build CLI tools
+        run: |
+          make clean
+          make -j2
+
+      - name: Upload build outputs
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trollrecorder-cli-build
+          path: |
+            .theos/obj/**
+            packages/*.deb
+          if-no-files-found: warn
